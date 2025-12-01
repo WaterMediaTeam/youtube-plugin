@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "$id",
+  "version": "$version",
+  "name": "$simplename",
+  "description": "$description",
+  "authors": $authors_list,
+  "contact": {
+    "homepage": "https://www.curseforge.com/minecraft/mc-mods/watermedia-yt-plugin/",
+    "sources": "https://github.com/$github",
+    "issues": "https://github.com/$github/issues",
+    "email": "SrRapero720@hotmail.com"
+  },
+
+  "license": "$license",
+  "icon": "pack.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "org.watermedia.youtube.loaders.FavricMCLoader"
+    ],
+    "main": [
+      "org.watermedia.youtube.loaders.FavricMCLoader"
+    ]
+  },
+  "depends": {
+    "java": "$javarange",
+    "watermedia": ">=2.1.37"
+  }
+}

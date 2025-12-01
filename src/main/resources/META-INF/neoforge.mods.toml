@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="$neofmlrange"
+issueTrackerURL="https://github.com/${github}/issues"
+license="$license"
+logoFile="pack.png"
+
+[[mods]]
+    modId="$id"
+    version="$version"
+    displayName="$simplename"
+    displayTest="IGNORE_SERVER_VERSION"
+    updateJSONURL="https://neoforge.curseupdate.com/1395870/watermedia-yt-plugin"
+    displayURL="https://www.curseforge.com/minecraft/mc-mods/watermedia-yt-plugin"
+    credits="$credits"
+    authors="$authors"
+    logoFile="pack.png"
+    description='''$description'''
+
+[[dependencies.${id}]]
+    modId="watermedia"
+    type="required"
+    ordering="AFTER"
+    side="CLIENT"
+    versionRange="[2.1.37,2.2)"
