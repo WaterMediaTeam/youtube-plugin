@@ -50,7 +50,7 @@ import java.util.regex.Pattern;
 public class YouTubePatch extends AbstractPatch {
 
     private static final Pattern YOUTUBE_PATTERN = Pattern.compile(
-            "^(?:https?://)?(?:www\\.|m\\.)?(?:youtube\\.com/(?:watch\\?v=|shorts/|embed/|v/)|youtu\\.be/)([a-zA-Z0-9_-]{11}).*$"
+            "(?:youtu\\.be/|youtube\\.com/(?:embed/|v/|shorts/|feeds/api/videos/|watch\\?v=|watch\\?.+&v=))([^/?&#]+)"
     );
 
     private static volatile boolean initialized = false;
@@ -113,9 +113,7 @@ public class YouTubePatch extends AbstractPatch {
 
     @Override
     public boolean isValid(final URI uri) {
-        if (uri == null) return false;
-        final String url = uri.toString();
-        return YOUTUBE_PATTERN.matcher(url).matches();
+        return uri.getHost() != null && YOUTUBE_PATTERN.matcher(uri.toString()).find();
     }
 
     @Override
@@ -127,8 +125,12 @@ public class YouTubePatch extends AbstractPatch {
         }
 
         try {
-            final String url = uri.toString();
+            final Matcher matcher = YOUTUBE_PATTERN.matcher(uri.toString());
+            if (!matcher.find()) throw new FixingURLException(uri, new IllegalArgumentException("Invalid YouTube URL, not video ID found"));
+            final String videoId = matcher.group(1);
+
             final YoutubeService youtube = ServiceList.YouTube;
+            final String url = youtube.getStreamLHFactory().getUrl(videoId);
             final StreamExtractor extractor = youtube.getStreamExtractor(url);
 
             // Fetch the page - this is where NewPipe does the actual extraction

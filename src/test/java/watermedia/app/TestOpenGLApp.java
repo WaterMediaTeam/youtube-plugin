@@ -206,7 +206,7 @@ public class TestOpenGLApp implements Executor {
     }
 
     public static void main(String[] args) {
-        String url = args.length == 0 ? "https://www.mediafire.com/file/f23l3csbeeap9jo/TU_QLO.mp4/file" : args[0];
+        String url = args.length == 0 ? "https://youtu.be/0G7iLQufCb0?si=kQ6n3suR73ynROip" : args[0];
         new TestOpenGLApp().run(URI.create(url));
     }
 
