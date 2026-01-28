@@ -6,6 +6,7 @@ import org.lwjgl.opengl.ARBDebugOutput;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.system.Platform;
 import org.watermedia.WaterMedia;
 import org.watermedia.api.image.ImageAPI;
 import org.watermedia.api.image.ImageCache;
@@ -67,6 +68,10 @@ public class TestOpenGLApp implements Executor {
         // Setup an error callback. The default implementation
         // will print the error message in System.err.
         GLFWErrorCallback.createPrint(System.err).set();
+
+        // Wayland does not like opengl that much, so we hint on using X11 instead
+        if (Platform.get().equals(Platform.LINUX))
+            glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
 
         // Initialize GLFW. Most GLFW functions will not work before doing this.
         if ( !glfwInit() )

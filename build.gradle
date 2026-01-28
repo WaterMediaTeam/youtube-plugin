@@ -62,7 +62,7 @@ dependencies {
 
     // SHADOW DEPENDENCIES
     library "com.github.WaterMediaTeam:watermedia:$watermedia_version"
-    shadow 'com.github.TeamNewPipe.NewPipeExtractor:NewPipeExtractor:v0.24.8'
+    shadow 'com.github.TeamNewPipe:NewPipeExtractor:v0.25.1'
 
     // DEPENDENCIES INCLUDED IN MINECRAFT
     library "net.java.dev.jna:jna:$jna_version"
