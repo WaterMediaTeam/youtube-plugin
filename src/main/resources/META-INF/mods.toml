@@ -21,4 +21,4 @@ logoFile="pack.png"
     mandatory=true
     ordering="BEFORE"
     side="CLIENT"
-    versionRange="[2.1.37,2.2)"
+    versionRange="[3,4)"

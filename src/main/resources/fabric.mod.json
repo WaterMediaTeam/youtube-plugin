@@ -25,6 +25,6 @@
   },
   "depends": {
     "java": "$javarange",
-    "watermedia": ">=2.1.37"
+    "watermedia": ">=3.0"
   }
 }
