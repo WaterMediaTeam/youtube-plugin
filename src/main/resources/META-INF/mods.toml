@@ -7,7 +7,7 @@ logoFile="pack.png"
 [[mods]]
     modId="$id"
     version="$version"
-    displayName="$simplename"
+    displayName="$libname"
     displayTest="IGNORE_SERVER_VERSION"
     updateJSONURL="https://forge.curseupdate.com/1395870/watermedia-yt-plugin"
     displayURL="https://www.curseforge.com/minecraft/mc-mods/watermedia-yt-plugin"
@@ -16,7 +16,7 @@ logoFile="pack.png"
     logoFile="pack.png"
     description='''$description'''
 
-[[dependencies.${id}]]
+[[dependencies.$id]]
     modId="watermedia"
     mandatory=true
     ordering="BEFORE"

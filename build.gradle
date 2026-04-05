@@ -1,9 +1,9 @@
 plugins {
     id 'java'
     id 'idea'
-    id 'com.github.johnrengelman.shadow' version '8.1.+'
+    id 'com.gradleup.shadow' version '9.+'
     id 'com.google.osdetector' version '1.7.+'
-    id "me.modmuss50.mod-publish-plugin" version "0.8.3"
+    id "me.modmuss50.mod-publish-plugin" version "1.+"
 }
 
 def MT_TOKEN = System.getenv("MODRINTH_TOKEN")
@@ -15,7 +15,8 @@ base {
 }
 
 test {
-    useJUnitPlatform()
+//    useJUnitPlatform()
+    enabled = false
 }
 
 java {
@@ -61,25 +62,30 @@ dependencies {
     compileOnly "net.fabricmc:fabric-loader:$fabric_version"
 
     // SHADOW DEPENDENCIES
-    library "com.github.WaterMediaTeam:watermedia:$watermedia_version"
-    shadow 'com.github.TeamNewPipe:NewPipeExtractor:v0.25.1'
+    library "com.github.WaterMediaTeam:watermedia-v3:$watermedia_version"
+    library "com.github.WaterMediaTeam:binaries:$watermedia_binaries_version"
+    shadow 'com.github.TeamNewPipe:NewPipeExtractor:v0.26.0'
 
     // DEPENDENCIES INCLUDED IN MINECRAFT
-    library "net.java.dev.jna:jna:$jna_version"
-    library "net.java.dev.jna:platform:$jnaplatform_version"
     library "org.apache.logging.log4j:log4j-api:$log4j_version"
-    library "org.apache.logging.log4j:log4j-core:$log4jcore_version"
+    library "org.apache.logging.log4j:log4j-core:$log4j_version"
+
     library "com.google.code.gson:gson:$gson_version"
+
     library "org.lwjgl:lwjgl-opengl:$opengl_version"
     library "org.lwjgl:lwjgl-glfw:$opengl_version"
+    library "org.lwjgl:lwjgl-stb:$opengl_version"
     library "org.lwjgl:lwjgl-openal:$openal_version"
 
     // TEST DEPENDENCIES
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+//    testImplementation(platform('org.junit:junit-bom:6.0.2'))
+//    testImplementation 'org.junit.jupiter:junit-jupiter'
+//    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     testRuntimeOnly "org.lwjgl:lwjgl:$opengl_version:natives-$osdetector.os"
     testRuntimeOnly "org.lwjgl:lwjgl-opengl:$opengl_version:natives-$osdetector.os"
     testRuntimeOnly "org.lwjgl:lwjgl-glfw:$opengl_version:natives-$osdetector.os"
+    testRuntimeOnly "org.lwjgl:lwjgl-openal:$openal_version:natives-$osdetector.os"
 }
 
 // Process target resources with mod info
@@ -120,7 +126,7 @@ jar {
         attributes "Specification-Title"        : id
         attributes "Specification-Vendor"       : authors
         attributes "Specification-Version"      : version
-        attributes "Implementation-Title"       : brandname
+        attributes "Implementation-Title"       : libname
         attributes "Implementation-Version"     : version
         attributes "Implementation-Vendor"      : authors
         attributes "Implementation-Timestamp"   : new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
@@ -132,7 +138,10 @@ jar {
 publishMods {
     file = shadowJar.archiveFile
     changelog = getChangelogText()
-    type = STABLE
+    type = "alpha".equalsIgnoreCase(project.properties.versiontype?.toString())
+            ? ALPHA : "beta".equalsIgnoreCase(project.properties.versiontype?.toString())
+            ? BETA : "release".equalsIgnoreCase(project.properties.versiontype?.toString())
+            ? STABLE : ALPHA
     displayName = "WM-YT/${project.properties.version}"
     modLoaders.add("forge")
     modLoaders.add("neoforge")
@@ -146,13 +155,12 @@ publishMods {
     curseforge {
         accessToken = CF_TOKEN
         projectId = curseforgeid
-        minecraftVersions.addAll("1.18.2", "1.19.2", "1.20.1", "1.21.1", "1.21.5")
+        minecraftVersions.addAll("1.18.2", "1.19.2", "1.20.1", "1.21.1", "1.21.11")
         javaVersions.addAll(JavaVersion.VERSION_21, JavaVersion.VERSION_17, JavaVersion.VERSION_11)
         clientRequired = true
         serverRequired = false
         projectSlug = id
         requires("watermedia")
-        incompatible("fancyvideo-api")
         additionalFile(sourcesJar) {
             name = "WM-sources/${project.properties.version}"
         }
@@ -161,7 +169,7 @@ publishMods {
     modrinth {
         accessToken = MT_TOKEN
         projectId = modrinthid
-        minecraftVersions.addAll("1.18.2", "1.19.2", "1.20.1", "1.21.1", "1.21.5")
+        minecraftVersions.addAll("1.18.2", "1.19.2", "1.20.1", "1.21.1", "1.21.11")
         requires("watermedia")
         incompatible("vlcvideoapi-pol")
     }

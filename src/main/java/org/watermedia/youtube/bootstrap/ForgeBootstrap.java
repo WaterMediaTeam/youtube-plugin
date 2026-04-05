@@ -1,11 +1,11 @@
-package org.watermedia.youtube.loaders;
+package org.watermedia.youtube.bootstrap;
 
 import net.minecraftforge.fml.common.Mod;
 import org.watermedia.youtube.WaterMediaYT;
 
 @Mod(value = WaterMediaYT.ID)
-public class ForgeMCLoader {
-    public ForgeMCLoader() {
+public class ForgeBootstrap {
+    public ForgeBootstrap() {
         WaterMediaYT.start();
     }
 }

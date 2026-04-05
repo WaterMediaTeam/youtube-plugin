@@ -1,11 +1,11 @@
-package org.watermedia.youtube.loaders;
+package org.watermedia.youtube.bootstrap;
 
 import net.neoforged.fml.common.Mod;
 import org.watermedia.youtube.WaterMediaYT;
 
 @Mod(value = WaterMediaYT.ID)
-public class NeoFLoader {
-    public NeoFLoader() {
+public class NeoBootstrap {
+    public NeoBootstrap() {
         WaterMediaYT.start();
     }
 }

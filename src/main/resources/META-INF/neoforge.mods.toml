@@ -7,7 +7,7 @@ logoFile="pack.png"
 [[mods]]
     modId="$id"
     version="$version"
-    displayName="$simplename"
+    displayName="$libname"
     displayTest="IGNORE_SERVER_VERSION"
     updateJSONURL="https://neoforge.curseupdate.com/1395870/watermedia-yt-plugin"
     displayURL="https://www.curseforge.com/minecraft/mc-mods/watermedia-yt-plugin"

@@ -1,11 +1,11 @@
-package org.watermedia.youtube.loaders;
+package org.watermedia.youtube.bootstrap;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
 import org.watermedia.WaterMedia;
 import org.watermedia.youtube.WaterMediaYT;
 
-public class FavricMCLoader implements ClientModInitializer, ModInitializer {
+public class FabricBootstrap implements ClientModInitializer, ModInitializer {
     @Override
     public void onInitializeClient() {
         WaterMediaYT.start();
