@@ -64,7 +64,7 @@ dependencies {
     // SHADOW DEPENDENCIES
     library "com.github.WaterMediaTeam:watermedia-v3:$watermedia_version"
     library "com.github.WaterMediaTeam:binaries:$watermedia_binaries_version"
-    shadow 'com.github.TeamNewPipe:NewPipeExtractor:v0.26.0'
+    shadow 'com.github.TeamNewPipe:NewPipeExtractor:v0.26.1'
 
     // DEPENDENCIES INCLUDED IN MINECRAFT
     library "org.apache.logging.log4j:log4j-api:$log4j_version"
@@ -101,13 +101,13 @@ shadowJar {
     dependsOn jar
     configurations = [project.configurations.shadow]
 
-    relocate 'com', 'org.watermedia.shaded.com'
+    relocate 'com.grack', 'org.watermedia.shaded.com.grack'
+    relocate 'com.google.protobuf', 'org.watermedia.shaded.com.google.protobuf'
     relocate 'org.schabi', 'org.watermedia.shaded.schabi'
     relocate 'org.mozilla', 'org.watermedia.shaded.mozilla'
     relocate 'org.jsoup', 'org.watermedia.shaded.jsoup'
-    relocate 'javax', 'org.watermedia.shaded.javax'
+    relocate 'javax.annotation', 'org.watermedia.shaded.javax.annotation'
 
-    exclude "META-INF/versions/**"
     exclude "META-INF/proguard/**"
     exclude "META-INF/maven/**"
     exclude "META-INF/LICENSE.*"
@@ -117,6 +117,7 @@ shadowJar {
 
     mergeServiceFiles()
     archiveClassifier = ""
+
 }
 
 jar {
