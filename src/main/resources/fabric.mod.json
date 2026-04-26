@@ -17,10 +17,10 @@
   "environment": "*",
   "entrypoints": {
     "client": [
-      "org.watermedia.youtube.loaders.FavricMCLoader"
+      "org.watermedia.youtube.bootstrap.FabricBootstrap"
     ],
     "main": [
-      "org.watermedia.youtube.loaders.FavricMCLoader"
+      "org.watermedia.youtube.bootstrap.FabricBootstrap"
     ]
   },
   "depends": {
