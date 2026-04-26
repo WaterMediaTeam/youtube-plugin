@@ -1,6 +1,6 @@
 modLoader="javafml"
 loaderVersion="$neofmlrange"
-issueTrackerURL="https://github.com/${github}/issues"
+issueTrackerURL="https://github.com/$github/issues"
 license="$license"
 logoFile="pack.png"
 
@@ -16,9 +16,9 @@ logoFile="pack.png"
     logoFile="pack.png"
     description='''$description'''
 
-[[dependencies.${id}]]
+[[dependencies.$id]]
     modId="watermedia"
     type="required"
-    ordering="AFTER"
+    ordering="BEFORE"
     side="CLIENT"
     versionRange="[3,4)"

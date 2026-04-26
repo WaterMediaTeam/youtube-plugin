@@ -1,6 +1,6 @@
 modLoader="javafml"
 loaderVersion="$forgefmlrange"
-issueTrackerURL="https://github.com/${github}/issues"
+issueTrackerURL="https://github.com/$github/issues"
 license="$license"
 logoFile="pack.png"
 
