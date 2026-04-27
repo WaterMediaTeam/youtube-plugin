@@ -1,3 +1,6 @@
+# 📦 RELEASE 3.0.0-beta.4
+- ⚙️ Changed: added delay on registering (prevents register BEFORE watermedia starts)
+
 # 📦 RELEASE 3.0.0-beta.3
 - 🐛 Fixed: Silent crash on (Neo)Forge due to bad jar building
 
