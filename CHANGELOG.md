@@ -1,3 +1,8 @@
+# 📦 RELEASE 3.0.0-beta.5
+- ⚙️ Changed: Updated NewPipeExtractor to 0.26.2
+- ✨ Updated to WaterMedia Beta 17
+- ✨ Added soundcloud support in this addon
+
 # 📦 RELEASE 3.0.0-beta.4
 - ⚙️ Changed: added delay on registering (prevents register BEFORE watermedia starts)
 
