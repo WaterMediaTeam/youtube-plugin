@@ -19,6 +19,8 @@ import org.lwjgl.system.Platform;
 import org.watermedia.WaterMedia;
 import org.watermedia.api.media.MRL;
 import org.watermedia.api.media.MediaAPI;
+import org.watermedia.api.media.engines.ALEngine;
+import org.watermedia.api.media.engines.GLEngine;
 import org.watermedia.api.media.players.MediaPlayer;
 import org.watermedia.youtube.WaterMediaYT;
 
@@ -193,14 +195,7 @@ public class TestOpenGLApp implements Executor {
 
             // Wait for MRL sources to be ready, then create player
             if (this.player == null && this.mrl.ready()) {
-                this.player = this.mrl.createPlayer(
-                        Thread.currentThread(),
-                        this,
-                        null, // GLEngine — null uses default GL11 bindings
-                        null, // ALEngine — null uses default AL10 bindings
-                        true, // video
-                        true  // audio
-                );
+                this.player = MediaAPI.createPlayer(this.mrl, () -> new GLEngine.Builder(Thread.currentThread(), this).build(), () -> new ALEngine(4));
 
                 if (this.player != null) {
                     this.player.start();
@@ -210,14 +205,14 @@ public class TestOpenGLApp implements Executor {
                 }
             }
 
-            if (this.mrl.error()) {
+            if (this.mrl.hasError()) {
                 System.err.println("MRL failed to load sources: " + this.mrl);
                 glfwSetWindowShouldClose(this.window, true);
             }
 
             // Render video texture
             if (this.player != null && this.player.texture() >= 0) {
-                glBindTexture(GL_TEXTURE_2D, this.player.texture());
+                glBindTexture(GL_TEXTURE_2D, (int) this.player.texture());
 
                 glColor4f(1, 1, 1, 1);
                 glBegin(GL_QUADS); {

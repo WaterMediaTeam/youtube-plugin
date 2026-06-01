@@ -11,8 +11,14 @@ import org.schabi.newpipe.extractor.stream.AudioStream;
 import org.schabi.newpipe.extractor.stream.StreamExtractor;
 import org.schabi.newpipe.extractor.stream.StreamType;
 import org.schabi.newpipe.extractor.stream.VideoStream;
-import org.watermedia.api.media.MRL;
-import org.watermedia.api.media.platform.IPlatform;
+import org.watermedia.api.platform.DataQuality;
+import org.watermedia.api.platform.DataSlave;
+import org.watermedia.api.platform.DataSource;
+import org.watermedia.api.platform.IPlatform;
+import org.watermedia.api.platform.PlatformData;
+import org.watermedia.api.util.MediaType;
+import org.watermedia.api.util.Metadata;
+import org.watermedia.api.util.RequestHeaders;
 
 import java.io.IOException;
 import java.net.URI;
@@ -22,11 +28,10 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -45,8 +50,7 @@ import static org.watermedia.WaterMedia.LOGGER;
  * </ul>
  *
  * <p>High quality streams (FHD, 4K, 8K) on YouTube are video-only,
- * so this platform attaches audio slaves to provide the audio track
- * at multiple bitrate tiers matched to the video quality level.
+ * so this platform attaches an audio slave to provide the audio track.
  */
 public class YouTubePlatform implements IPlatform {
     private static final Marker IT = MarkerManager.getMarker(YouTubePlatform.class.getSimpleName());
@@ -56,22 +60,6 @@ public class YouTubePlatform implements IPlatform {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
     private static final String PLAYLIST_BASE_URL = "https://www.youtube.com/playlist?list=";
     private static final String EXPIRE_PARAM_PREFIX = "expire=";
-    private static final Map<String, Integer> RESOLUTION_HEIGHT = Map.ofEntries(
-            Map.entry("144p", 144),
-            Map.entry("240p", 240),
-            Map.entry("360p", 360),
-            Map.entry("480p", 480),
-            Map.entry("720p", 720),
-            Map.entry("720p60", 720),
-            Map.entry("1080p", 1080),
-            Map.entry("1080p60", 1080),
-            Map.entry("1440p", 1440),
-            Map.entry("1440p60", 1440),
-            Map.entry("2160p", 2160),
-            Map.entry("2160p60", 2160),
-            Map.entry("4320p", 4320),
-            Map.entry("4320p60", 4320)
-    );
 
 
     @Override
@@ -86,7 +74,7 @@ public class YouTubePlatform implements IPlatform {
     }
 
     @Override
-    public Result getSources(final URI uri) throws Exception {
+    public PlatformData getData(final URI uri) throws Exception {
         // Extract "list" query param inline
         String playlistId = null;
         final String query = uri.getRawQuery();
@@ -110,7 +98,8 @@ public class YouTubePlatform implements IPlatform {
                     return this.playlist(playlistId);
                 } catch (final IllegalArgumentException e) {
                     LOGGER.debug(IT, "Playlist from video link is dynamic, resolving single video: {}", e.getMessage());
-                    return this.stream(matcher.group(1));
+                    final Result r = this.stream(matcher.group(1));
+                    return new PlatformData(r.expires(), r.source());
                 }
             }
 
@@ -123,7 +112,8 @@ public class YouTubePlatform implements IPlatform {
             throw new IllegalArgumentException("Invalid YouTube URL: no video ID found in " + uri);
         }
 
-        return this.stream(matcher.group(1));
+        final Result r = this.stream(matcher.group(1));
+        return new PlatformData(r.expires(), r.source());
     }
 
     /**
@@ -136,91 +126,92 @@ public class YouTubePlatform implements IPlatform {
         );
         extractor.fetchPage();
 
-        final MRL.Metadata meta = metadata(extractor);
         final StreamType streamType = extractor.getStreamType();
 
         // Audio-only content (music uploads, podcasts)
         if (streamType == StreamType.AUDIO_STREAM || streamType == StreamType.AUDIO_LIVE_STREAM) {
-            return this.audio(extractor, meta);
+            return this.audio(extractor);
         }
 
         // Video content (regular, live, post-live)
-        return this.video(extractor, meta);
+        return this.video(extractor);
     }
 
     /**
-     * Builds a VIDEO source with multiple quality tiers and audio slaves.
+     * Builds a VIDEO source with every available resolution variant plus an audio slave.
      *
      * <p>Strategy:
      * <ol>
      *     <li>Video-only streams are added first (preferred, best quality per resolution)</li>
-     *     <li>Muxed streams fill remaining quality tiers not covered by video-only</li>
-     *     <li>Audio slaves provide the audio track at multiple bitrate tiers,
-     *         essential for video-only FHD/4K/8K streams that have no embedded audio</li>
+     *     <li>Muxed streams fill resolution tiers not covered by video-only</li>
+     *     <li>An audio slave provides the audio track, essential for the video-only
+     *         FHD/4K/8K streams that have no embedded audio</li>
      * </ol>
      */
-    private Result video(final StreamExtractor extractor, final MRL.Metadata metadata) throws Exception {
+    private Result video(final StreamExtractor extractor) throws Exception {
         final List<VideoStream> videoOnlyStreams = extractor.getVideoOnlyStreams();
         final List<VideoStream> muxedStreams = extractor.getVideoStreams();
         final List<AudioStream> audioStreams = extractor.getAudioStreams();
 
-        final EnumMap<MRL.Quality, URI> videoQualities = new EnumMap<>(MRL.Quality.class);
+        final List<DataQuality> variants = new ArrayList<>();
+        final Set<Integer> seenHeights = new HashSet<>();
 
-        // Video-only first (higher priority: best quality, we supply audio via slaves)
+        // Video-only first (higher priority: best quality, we supply audio via a slave)
         if (videoOnlyStreams != null) {
-            for (final VideoStream s: videoOnlyStreams) {
-                videoQualities.putIfAbsent(videoQuality(s), URI.create(s.getContent()));
+            for (final VideoStream s : videoOnlyStreams) {
+                addVariant(variants, seenHeights, s);
             }
         }
 
-        // Muxed streams as fallback (only fills quality tiers not already covered)
+        // Muxed streams as fallback (only fills resolution tiers not already covered)
         if (muxedStreams != null) {
-            for (final VideoStream s: muxedStreams) {
-                videoQualities.putIfAbsent(videoQuality(s), URI.create(s.getContent()));
+            for (final VideoStream s : muxedStreams) {
+                addVariant(variants, seenHeights, s);
             }
         }
 
         // No video streams at all — fall back to audio-only
-        if (videoQualities.isEmpty()) {
-            return this.audio(extractor, metadata);
-        }
-
-        // Assemble the source
-        final var builder = MRL.sourceBuilder(MRL.MediaType.VIDEO).metadata(metadata);
-        for (final var entry : videoQualities.entrySet()) {
-            builder.quality(entry.getKey(), entry.getValue());
+        if (variants.isEmpty()) {
+            return this.audio(extractor);
         }
 
         // Audio slave: provides the audio track for video-only streams (FHD, 4K, 8K)
-        // and an alternative audio track for muxed streams
-        if (audioStreams != null && !audioStreams.isEmpty()) {
-            final var aq = this.audioQualities(audioStreams);
-            if (!aq.isEmpty()) {
-                builder.slave(new MRL.Slave(MRL.SlaveType.AUDIO, null, null, aq));
-            }
-        }
+        final List<DataSlave> audioSlaves = audioSlaves(audioStreams);
 
-        final Instant exp = expiration(videoQualities.values().iterator().next());
-        return new Result(exp, builder.build());
+        final var source = new DataSource(
+                MediaType.VIDEO,
+                thumbnail(extractor),
+                metadata(extractor),
+                RequestHeaders.defaults(URI.create(extractor.getUrl())),
+                variants.toArray(DataQuality[]::new),
+                audioSlaves,
+                null);
+
+        final Instant exp = expiration(variants.get(0).uri());
+        return new Result(exp, source);
     }
 
     /**
-     * Builds an AUDIO source with multiple bitrate tiers (music, podcasts, audio live).
+     * Builds an AUDIO source from the best available audio stream (music, podcasts, audio live).
      */
-    private Result audio(final StreamExtractor extractor, final MRL.Metadata metadata) throws Exception {
+    private Result audio(final StreamExtractor extractor) throws Exception {
         final List<AudioStream> audioStreams = extractor.getAudioStreams();
         if (audioStreams == null || audioStreams.isEmpty()) {
             throw new IllegalStateException("No audio streams available for " + extractor.getUrl());
         }
 
-        final var builder = MRL.sourceBuilder(MRL.MediaType.AUDIO).metadata(metadata);
-        final var aq = this.audioQualities(audioStreams);
-        for (final var entry : aq.entrySet()) {
-            builder.quality(entry.getKey(), entry.getValue());
-        }
+        final URI bestAudio = URI.create(bestAudioStream(audioStreams).getContent());
 
-        final Instant exp = expiration(aq.values().iterator().next());
-        return new Result(exp, builder.build());
+        final var source = new DataSource(
+                MediaType.AUDIO,
+                thumbnail(extractor),
+                metadata(extractor),
+                RequestHeaders.defaults(URI.create(extractor.getUrl())),
+                new DataQuality[] { new DataQuality(bestAudio, 0, 0) },
+                null,
+                null);
+
+        return new Result(expiration(bestAudio), source);
     }
 
     /**
@@ -230,7 +221,7 @@ public class YouTubePlatform implements IPlatform {
      * @param playlistId the YouTube playlist ID (e.g. PLxxx)
      * @throws IllegalArgumentException if the playlist is a mix or auto-generated
      */
-    private Result playlist(final String playlistId) throws Exception {
+    private PlatformData playlist(final String playlistId) throws Exception {
         final var youtube = ServiceList.YouTube;
         final var playlistExtractor = youtube.getPlaylistExtractor(PLAYLIST_BASE_URL + playlistId);
         playlistExtractor.fetchPage();
@@ -255,7 +246,7 @@ public class YouTubePlatform implements IPlatform {
         }
 
         // Extract each video and collect sources
-        final var sources = new ArrayList<MRL.Source>();
+        final var sources = new ArrayList<DataSource>();
         Instant earliestExpiration = null;
 
         for (final var item : allItems) {
@@ -263,18 +254,18 @@ public class YouTubePlatform implements IPlatform {
                 final var streamExtractor = youtube.getStreamExtractor(item.getUrl());
                 streamExtractor.fetchPage();
 
-                final MRL.Metadata meta = metadata(streamExtractor);
                 final StreamType streamType = streamExtractor.getStreamType();
 
                 final Result itemResult;
                 if (streamType == StreamType.AUDIO_STREAM || streamType == StreamType.AUDIO_LIVE_STREAM) {
-                    itemResult = this.audio(streamExtractor, meta);
+                    itemResult = this.audio(streamExtractor);
                 } else {
-                    itemResult = this.video(streamExtractor, meta);
+                    itemResult = this.video(streamExtractor);
                 }
 
-                Collections.addAll(sources, itemResult.sources());
-                if (earliestExpiration == null || itemResult.expires().isBefore(earliestExpiration)) {
+                sources.add(itemResult.source());
+                if (earliestExpiration == null
+                        || (itemResult.expires() != null && itemResult.expires().isBefore(earliestExpiration))) {
                     earliestExpiration = itemResult.expires();
                 }
             } catch (final Exception e) {
@@ -286,8 +277,14 @@ public class YouTubePlatform implements IPlatform {
             throw new IllegalStateException("No streams could be extracted from playlist: " + playlistId);
         }
 
-        return new Result(earliestExpiration, sources.toArray(MRL.Source[]::new));
+        return new PlatformData(earliestExpiration, sources.toArray(DataSource[]::new));
     }
+
+    /**
+     * Internal holder pairing a single resolved {@link DataSource} with its expiration,
+     * so the playlist path can aggregate multiple entries and compute the earliest expiration.
+     */
+    private record Result(Instant expires, DataSource source) {}
 
     // =========================================================================
     // EXPIRATION EXTRACTION
@@ -320,79 +317,56 @@ public class YouTubePlatform implements IPlatform {
     // =========================================================================
 
     /**
-     * Maps a NewPipe VideoStream to the corresponding MRL.Quality level.
-     * Uses resolution string (e.g. "1080p60") with fallback to pixel height.
+     * Adds a video stream as a {@link DataQuality} variant, skipping resolutions already
+     * present. Called video-only first then muxed, so video-only renditions win each tier.
      */
-    private static MRL.Quality videoQuality(final VideoStream stream) {
-        int height = 0;
-
-        // Resolution string is more reliable on YouTube
-        final String resolution = stream.getResolution();
-        if (!resolution.isEmpty()) {
-            final Integer mapped = RESOLUTION_HEIGHT.get(resolution);
-            if (mapped != null) {
-                height = mapped;
-            } else {
-                final Matcher m = RESOLUTION_PARSER.matcher(resolution);
-                if (m.find()) {
-                    try { height = Integer.parseInt(m.group(1)); } catch (final NumberFormatException ignored) {}
-                }
-            }
+    private static void addVariant(final List<DataQuality> variants, final Set<Integer> seenHeights, final VideoStream stream) {
+        final int height = resolutionHeight(stream);
+        if (height > 0 && !seenHeights.add(height)) {
+            return; // a stream for this resolution was already added
         }
-
-        // Fallback to the height field
-        if (height <= 0) {
-            height = stream.getHeight();
-        }
-
-        if (height <= 0) return MRL.Quality.UNKNOWN;
-
-        // Quality.of(width, height) uses Math.min(w, h) internally.
-        // YouTube is landscape, so height is always the smaller dimension.
-        // We provide a synthetic width so Math.min correctly returns the height.
-        return MRL.Quality.of(height * 16 / 9, height);
+        // YouTube is landscape; supply a synthetic 16:9 width so MediaQuality.of picks the height
+        final int width = height > 0 ? height * 16 / 9 : 0;
+        variants.add(new DataQuality(URI.create(stream.getContent()), width, height));
     }
 
     /**
-     * Builds audio quality tiers from available audio streams.
-     * Maps bitrate ranges to MRL.Quality levels for the Slave's quality EnumMap,
-     * so the player can pick audio quality matched to the selected video quality.
-     *
-     * <ul>
-     *     <li>LOWEST  — lowest bitrate (for 144p–360p playback)</li>
-     *     <li>MEDIUM  — mid bitrate    (for 480p–720p playback)</li>
-     *     <li>HIGHEST — best bitrate   (for FHD, 4K, 8K playback)</li>
-     * </ul>
+     * Resolves the pixel height of a NewPipe VideoStream.
+     * Uses the resolution string (e.g. "1080p60") with a fallback to the height field.
      */
-    private EnumMap<MRL.Quality, URI> audioQualities(final List<AudioStream> streams) {
-        final var qualities = new EnumMap<MRL.Quality, URI>(MRL.Quality.class);
-
-        final List<AudioStream> sorted = streams.stream()
-                .filter(s -> s.getAverageBitrate() > 0)
-                .sorted(Comparator.comparingInt(AudioStream::getAverageBitrate))
-                .toList();
-
-        if (sorted.isEmpty()) {
-            // No bitrate info available — use first valid stream as single quality
-            for (final AudioStream s: streams) {
-                qualities.put(MRL.Quality.UNKNOWN, URI.create(s.getContent()));
-                break;
+    private static int resolutionHeight(final VideoStream stream) {
+        final String resolution = stream.getResolution();
+        if (resolution != null && !resolution.isEmpty()) {
+            final Matcher m = RESOLUTION_PARSER.matcher(resolution);
+            if (m.find()) {
+                try {
+                    return Integer.parseInt(m.group(1));
+                } catch (final NumberFormatException ignored) {}
             }
-            return qualities;
         }
+        return Math.max(stream.getHeight(), 0);
+    }
 
-        // Lowest bitrate for low quality playback
-        qualities.put(MRL.Quality.LOWEST, URI.create(sorted.get(0).getContent()));
+    /**
+     * Wraps the highest-bitrate audio stream as a single audio slave, or {@code null} when
+     * none are available. YouTube exposes audio as alternative tracks rather than quality
+     * tiers, so a single best-bitrate slave covers the video-only renditions.
+     */
+    private static List<DataSlave> audioSlaves(final List<AudioStream> streams) {
+        if (streams == null || streams.isEmpty()) return null;
+        final URI uri = URI.create(bestAudioStream(streams).getContent());
+        return List.of(new DataSlave(null, null, uri));
+    }
 
-        // Highest bitrate for FHD/4K/8K playback
-        qualities.put(MRL.Quality.HIGHEST, URI.create(sorted.get(sorted.size() - 1).getContent()));
-
-        // Mid-tier for medium quality playback
-        if (sorted.size() >= 3) {
-            qualities.put(MRL.Quality.MEDIUM, URI.create(sorted.get(sorted.size() / 2).getContent()));
-        }
-
-        return qualities;
+    /**
+     * Picks the audio stream with the highest average bitrate, falling back to the first
+     * stream when no bitrate information is reported.
+     */
+    private static AudioStream bestAudioStream(final List<AudioStream> streams) {
+        return streams.stream()
+                .filter(s -> s.getAverageBitrate() > 0)
+                .max(Comparator.comparingInt(AudioStream::getAverageBitrate))
+                .orElse(streams.get(0));
     }
 
     // =========================================================================
@@ -400,13 +374,26 @@ public class YouTubePlatform implements IPlatform {
     // =========================================================================
 
     /**
+     * Extracts the highest-resolution thumbnail URI from the StreamExtractor, or {@code null}.
+     */
+    private static URI thumbnail(final StreamExtractor extractor) {
+        try {
+            final var thumbs = extractor.getThumbnails();
+            if (thumbs != null && !thumbs.isEmpty()) {
+                // Last thumbnail is typically highest resolution
+                return URI.create(thumbs.get(thumbs.size() - 1).getUrl());
+            }
+        } catch (final Exception ignored) {}
+        return null;
+    }
+
+    /**
      * Extracts video metadata from the StreamExtractor.
      * Each field is extracted independently to avoid one failure breaking all metadata.
      */
-    private static MRL.Metadata metadata(final StreamExtractor extractor) {
+    private static Metadata metadata(final StreamExtractor extractor) {
         String title = null;
         String description = null;
-        URI thumbnail = null;
         Instant publishedAt = null;
         long durationMs = 0;
         String author = null;
@@ -426,21 +413,13 @@ public class YouTubePlatform implements IPlatform {
         } catch (final Exception ignored) {}
 
         try {
-            final var thumbs = extractor.getThumbnails();
-            if (!thumbs.isEmpty()) {
-                // Last thumbnail is typically highest resolution
-                thumbnail = URI.create(thumbs.get(thumbs.size() - 1).getUrl());
-            }
-        } catch (final Exception ignored) {}
-
-        try {
             final var uploadDate = extractor.getUploadDate();
             if (uploadDate != null) {
                 publishedAt = uploadDate.offsetDateTime().toInstant();
             }
         } catch (final Exception ignored) {}
 
-        return new MRL.Metadata(title, description, thumbnail, publishedAt, durationMs, author);
+        return new Metadata(title, description, publishedAt, durationMs, author);
     }
 
     // =========================================================================

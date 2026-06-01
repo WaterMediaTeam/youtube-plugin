@@ -6,7 +6,9 @@ import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.localization.Localization;
 import org.watermedia.WaterMedia;
 import org.watermedia.api.media.MediaAPI;
+import org.watermedia.api.platform.PlatformAPI;
 import org.watermedia.tools.ThreadTool;
+import org.watermedia.youtube.patch.SoundCloudPlatform;
 import org.watermedia.youtube.patch.YouTubePlatform;
 
 import java.util.Locale;
@@ -18,10 +20,7 @@ public class WaterMediaYT {
     public static void start() {
         LOGGER.info("Registering YT extension");
         NewPipe.init(new YouTubePlatform.WaterMediaDownloader(), Localization.fromLocale(Locale.getDefault()));
-        // DIRTY HACK BECAUSE LOADERS DOESN'T ORDER LOADING PROPERLY
-        ThreadTool.createStarted("Register new Youtube", () -> {
-            ThreadTool.sleep(15000);
-            MediaAPI.registerPlatform(new YouTubePlatform(), org.watermedia.api.media.platform.YoutubePlatform.class);
-        });
+        PlatformAPI.register(new YouTubePlatform());
+        PlatformAPI.register(new SoundCloudPlatform());
     }
 }

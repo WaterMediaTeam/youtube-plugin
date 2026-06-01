@@ -64,7 +64,7 @@ dependencies {
     // SHADOW DEPENDENCIES
     library "com.github.WaterMediaTeam:watermedia-v3:$watermedia_version"
     library "com.github.WaterMediaTeam:binaries:$watermedia_binaries_version"
-    shadow 'com.github.TeamNewPipe:NewPipeExtractor:v0.26.1'
+    shadow "com.github.TeamNewPipe:NewPipeExtractor:$newpipeex_version"
 
     // DEPENDENCIES INCLUDED IN MINECRAFT
     library "org.apache.logging.log4j:log4j-api:$log4j_version"
