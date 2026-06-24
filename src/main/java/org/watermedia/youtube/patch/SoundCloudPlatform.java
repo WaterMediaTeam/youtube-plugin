@@ -51,13 +51,13 @@ public class SoundCloudPlatform implements IPlatform {
     }
 
     @Override
-    public boolean validate(final URI uri) {
-        final String host = uri.getHost();
-        return host != null && (host.endsWith("soundcloud.com") || host.equalsIgnoreCase("snd.sc"));
-    }
-
-    @Override
     public PlatformData getData(final URI uri) throws Exception {
+        // Not a SoundCloud URL → let PlatformAPI keep probing other handlers
+        final String host = uri.getHost();
+        if (host == null || !(host.endsWith("soundcloud.com") || host.equalsIgnoreCase("snd.sc"))) {
+            return null;
+        }
+
         final StreamingService soundcloud = ServiceList.SoundCloud;
         final String url = uri.toString();
 

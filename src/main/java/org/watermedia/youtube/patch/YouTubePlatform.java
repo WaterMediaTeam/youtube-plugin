@@ -68,13 +68,13 @@ public class YouTubePlatform implements IPlatform {
     }
 
     @Override
-    public boolean validate(final URI uri) {
-        final String host = uri.getHost();
-        return host != null && (host.endsWith("youtube.com") || host.endsWith("youtu.be"));
-    }
-
-    @Override
     public PlatformData getData(final URI uri) throws Exception {
+        // Not a YouTube URL → let PlatformAPI keep probing other handlers
+        final String host = uri.getHost();
+        if (host == null || !(host.endsWith("youtube.com") || host.endsWith("youtu.be"))) {
+            return null;
+        }
+
         // Extract "list" query param inline
         String playlistId = null;
         final String query = uri.getRawQuery();
