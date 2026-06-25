@@ -1,0 +1,52 @@
+name: Build for Release
+
+# Publishes platform-extension to CurseForge and Modrinth via the mod-publish-plugin. Triggered by a
+# version tag push (manual releases) or by workflow_dispatch (used by update-ytdlp.yml after a bump).
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [curseforge, modrinth]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'microsoft'
+
+      - name: Setup Gradle 9.3.0
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.0'
+
+      - name: Build JAR
+        run: gradle build
+
+      - name: Publish to CurseForge
+        if: ${{ matrix.platform == 'curseforge' }}
+        run: gradle publishCurseforge --parallel
+        env:
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+
+      - name: Publish to Modrinth
+        if: ${{ matrix.platform == 'modrinth' }}
+        run: gradle publishModrinth --parallel
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}

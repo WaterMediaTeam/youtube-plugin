@@ -15,18 +15,13 @@ base {
 }
 
 test {
-//    useJUnitPlatform()
+    // NO UNIT TESTS: TestOpenGLApp IS A MANUAL main()-DRIVEN HARNESS, NOT A JUNIT SUITE
     enabled = false
 }
 
 java {
     withSourcesJar()
     sourceCompatibility = targetCompatibility = JavaVersion.VERSION_17
-}
-
-sourcesJar {
-    exclude("videolan/**.zip")
-    exclude("videolan/**.7z")
 }
 
 println("Gradle Java: ${JavaVersion.current()}")
@@ -64,28 +59,36 @@ dependencies {
     // SHADOW DEPENDENCIES
     library "com.github.WaterMediaTeam:watermedia-v3:$watermedia_version"
     library "com.github.WaterMediaTeam:binaries:$watermedia_binaries_version"
-    shadow "com.github.TeamNewPipe:NewPipeExtractor:$newpipeex_version"
+    shadow "org.tukaani:xz:$xz_version" // DECOMPRESSES THE .tar.xz rustypipe-botguard RELEASES
+
+    // PARSES yt-dlp'S JSON OUTPUT. GSON IS PROVIDED BY MINECRAFT/WATERMEDIA AT RUNTIME (compileOnly HERE)
+    compileOnly "com.google.code.gson:gson:$gson_version"
 
     // DEPENDENCIES INCLUDED IN MINECRAFT
     library "org.apache.logging.log4j:log4j-api:$log4j_version"
     library "org.apache.logging.log4j:log4j-core:$log4j_version"
-
-    library "com.google.code.gson:gson:$gson_version"
 
     library "org.lwjgl:lwjgl-opengl:$opengl_version"
     library "org.lwjgl:lwjgl-glfw:$opengl_version"
     library "org.lwjgl:lwjgl-stb:$opengl_version"
     library "org.lwjgl:lwjgl-openal:$openal_version"
 
-    // TEST DEPENDENCIES
-//    testImplementation(platform('org.junit:junit-bom:6.0.2'))
-//    testImplementation 'org.junit.jupiter:junit-jupiter'
-//    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
+    // TEST DEPENDENCIES (NATIVES FOR THE MANUAL TestOpenGLApp/PlatformSmokeTest HARNESSES)
+    testImplementation "com.google.code.gson:gson:$gson_version" // GSON: WATERMEDIA NEEDS IT + THE SMOKE TEST PARSES yt-dlp JSON
     testRuntimeOnly "org.lwjgl:lwjgl:$opengl_version:natives-$osdetector.os"
     testRuntimeOnly "org.lwjgl:lwjgl-opengl:$opengl_version:natives-$osdetector.os"
     testRuntimeOnly "org.lwjgl:lwjgl-glfw:$opengl_version:natives-$osdetector.os"
     testRuntimeOnly "org.lwjgl:lwjgl-openal:$openal_version:natives-$osdetector.os"
+}
+
+// MANUAL VERIFICATION: resolves a URL through the extension platforms (host routing + yt-dlp) and prints
+// the resolved streams. Runs on this machine's network. Usage: gradle platformSmoke -Purl=<url>
+tasks.register('platformSmoke', JavaExec) {
+    group = 'verification'
+    description = 'Resolve a media URL through the extension platforms and print the DataSource (-Purl=<url>)'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'PlatformSmokeTest'
+    if (project.hasProperty('url')) args = [project.property('url').toString()]
 }
 
 // Process target resources with mod info
@@ -101,12 +104,7 @@ shadowJar {
     dependsOn jar
     configurations = [project.configurations.shadow]
 
-    relocate 'com.grack', 'org.watermedia.shaded.com.grack'
-    relocate 'com.google.protobuf', 'org.watermedia.shaded.com.google.protobuf'
-    relocate 'org.schabi', 'org.watermedia.shaded.schabi'
-    relocate 'org.mozilla', 'org.watermedia.shaded.mozilla'
-    relocate 'org.jsoup', 'org.watermedia.shaded.jsoup'
-    relocate 'javax.annotation', 'org.watermedia.shaded.javax.annotation'
+    relocate 'org.tukaani', 'org.watermedia.shaded.tukaani' // xz (used to unpack the rustypipe-botguard archive)
 
     exclude "META-INF/proguard/**"
     exclude "META-INF/maven/**"

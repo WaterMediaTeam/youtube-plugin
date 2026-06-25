@@ -21,4 +21,4 @@ logoFile="pack.png"
     mandatory=true
     ordering="BEFORE"
     side="CLIENT"
-    versionRange="[3,4)"
+    versionRange="$watermediarange"

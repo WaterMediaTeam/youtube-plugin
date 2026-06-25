@@ -19,10 +19,11 @@ import org.lwjgl.system.Platform;
 import org.watermedia.WaterMedia;
 import org.watermedia.api.media.MRL;
 import org.watermedia.api.media.MediaAPI;
+import org.watermedia.api.platform.PlatformAPI;
 import org.watermedia.api.media.engines.ALEngine;
 import org.watermedia.api.media.engines.GLEngine;
 import org.watermedia.api.media.players.MediaPlayer;
-import org.watermedia.youtube.WaterMediaYT;
+import org.watermedia.bootstrap.AppBootstrap;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -32,6 +33,7 @@ import java.nio.IntBuffer;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.ServiceLoader;
 import java.util.concurrent.Executor;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
@@ -87,6 +89,11 @@ public class TestOpenGLApp implements Executor {
     public void run(final URI url) {
         // Initialize WaterMedia v3
         WaterMedia.start("TEST", null, null, true);
+        ServiceLoader.load(AppBootstrap.Extension.class).forEach(AppBootstrap.Extension::load);
+
+        while (WaterMedia.steps() != WaterMedia.step()) {
+            // wait
+        }
 
         // Request MRL (starts async loading via IPlatform)
         this.mrl = MediaAPI.getMRL(url.toString());
@@ -167,10 +174,10 @@ public class TestOpenGLApp implements Executor {
         AL.createCapabilities(alcCaps);
 
         try {
-            final Field f = MediaAPI.class.getDeclaredField("PLATFORMS");
+            final Field f = PlatformAPI.class.getDeclaredField("PLATFORMS");
             f.setAccessible(true);
-            ((java.util.LinkedList<?>) f.get(null)).forEach(platform -> System.out.println("Registered platform: " + platform.getClass().getName()));
-        } catch (final Exception e) {
+            ((java.util.Collection<?>) f.get(null)).forEach(platform -> System.out.println("Registered platform: " + platform.getClass().getName()));
+        } catch (final Exception ignored) {
 
         }
     }
@@ -194,7 +201,7 @@ public class TestOpenGLApp implements Executor {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // Wait for MRL sources to be ready, then create player
-            if (this.player == null && this.mrl.ready()) {
+            if (this.player == null && this.mrl.status().loaded()) {
                 this.player = MediaAPI.createPlayer(this.mrl, () -> new GLEngine.Builder(Thread.currentThread(), this).build(), () -> new ALEngine(4));
 
                 if (this.player != null) {
@@ -205,8 +212,8 @@ public class TestOpenGLApp implements Executor {
                 }
             }
 
-            if (this.mrl.hasError()) {
-                System.err.println("MRL failed to load sources: " + this.mrl);
+            if (this.mrl.status().failed()) {
+                System.err.println("MRL failed to load sources: " + this.mrl + " - " + this.mrl.exception());
                 glfwSetWindowShouldClose(this.window, true);
             }
 
