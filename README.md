@@ -1,3 +1,5 @@
+[![KINETIC HOSTING PARTNER](https://media.forgecdn.net/banner/console-affiliation-banners/banner_bfc6e9fa-4357-4198-9d85-32a3084adf49.webp)](https://billing.kinetichosting.com/aff.php?aff=136)
+
 # 🔌 PLATFORM EXTENSION
 WATERMeDIA extension, uses YTDPL to add support to way more platforms that doesn't have
 native (java) support on PlatformAPI
@@ -10,6 +12,7 @@ doesn't need this extension at all
 |  Platform  | URL            | NOTES                     |
 |:----------:|----------------|---------------------------|
 |  YOUTUBE   | youtube.com    | Requires constant updates |
+| SOUNDCLOUD | soundcloud.com |                           |
 |  FACEBOOK  | facebook.com   |                           |
 | INSTAGRAM  | instagram.com  | Requires session cookie   |
 | NEWGROUNDS | newgrounds.com |                           |
