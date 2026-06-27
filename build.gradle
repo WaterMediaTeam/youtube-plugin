@@ -154,7 +154,7 @@ publishMods {
     curseforge {
         accessToken = CF_TOKEN
         projectId = curseforgeid
-        minecraftVersions.addAll("1.18.2", "1.19.2", "1.20.1", "1.21.1", "1.21.11")
+        minecraftVersions.addAll("1.20.1", "1.21.1", "1.21.11", "26.1.2")
         javaVersions.addAll(JavaVersion.VERSION_21, JavaVersion.VERSION_17, JavaVersion.VERSION_11)
         clientRequired = true
         serverRequired = false
@@ -168,9 +168,8 @@ publishMods {
     modrinth {
         accessToken = MT_TOKEN
         projectId = modrinthid
-        minecraftVersions.addAll("1.18.2", "1.19.2", "1.20.1", "1.21.1", "1.21.11")
+        minecraftVersions.addAll("1.20.1", "1.21.1", "1.21.11", "26.1.2")
         requires("watermedia")
-        incompatible("vlcvideoapi-pol")
     }
 }
 

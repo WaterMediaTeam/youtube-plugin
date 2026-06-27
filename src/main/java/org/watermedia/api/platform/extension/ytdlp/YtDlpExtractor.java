@@ -180,7 +180,7 @@ public final class YtDlpExtractor {
     // THEM — THE GOOGLEVIDEO URLS 403 WITHOUT THE MATCHING UA. FALLS BACK TO WATERMEDIA DEFAULTS.
     private static RequestHeaders headers(final JsonObject format, final URI sourceUri) {
         final JsonObject hh = format == null ? null : format.getAsJsonObject("http_headers");
-        if (hh == null || hh.isEmpty()) {
+        if (hh == null || hh.size() == 0) {
             return sourceUri == null ? new RequestHeaders() : RequestHeaders.defaults(sourceUri);
         }
         final RequestHeaders headers = new RequestHeaders();
