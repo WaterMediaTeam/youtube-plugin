@@ -1,3 +1,6 @@
+# 📦 RELEASE 3.0.0-beta.7
+- 🐛 Fixed: Crashes having GSON version below 2.10 (MC 1.20.1)  
+
 # 📦 RELEASE 3.0.0-beta.6
 - 🐛 Fixed: YouTube (and other) links failing to resolve — replaced NewPipeExtractor with yt-dlp, which keeps up with YouTube's player signature/throttling changes. The standalone yt-dlp binary is fetched on demand at runtime (no Python required)
 - ✨ Added Facebook, Instagram and Newgrounds support, alongside YouTube and SoundCloud
